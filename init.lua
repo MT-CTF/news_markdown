@@ -4,7 +4,7 @@ local prefix = "newsOnJoinExceptions_"
 local colors = {
     background_color = "#FFF0",
     font_color = "#FFF",
-    heading_1_color = "#AFA",
+    heading_1_color = "#AFF",
     heading_2_color = "#FAA",
     heading_3_color = "#AAF",
     heading_4_color = "#FFA",
@@ -21,6 +21,34 @@ local colors = {
     mono_color = "#6F6",
     block_quote_color = "#FFA",
 }
+
+-- Replace the "newshash" key of mod storage with the SHA1 of the English news file
+local function update_hash()
+    local english_news = io.open(minetest.get_worldpath() .. "/news_en.md", "r")
+
+    storage:set_string("newshash", minetest.sha1(english_news:read("*a")))
+    english_news:close()
+
+    minetest.log("action", "Updated news hash in mod storage")
+end
+
+-- Check the stored news hash against the current hash, if they are different then there are updates
+local function check_for_updates(name)
+    local english_news = io.open(minetest.get_worldpath() .. "/news_en.md", "r")
+    local english_news_data = english_news:read("*a")
+
+    if (storage:get_string("newshash") ~= minetest.sha1(english_news_data)) then
+        update_hash()
+
+        if (storage:get_int(prefix .. name) == 1) then
+            minetest.chat_send_player(name, "There are news updates, type /news to see them")
+        end
+
+        minetest.log("action", "News updates found")
+    end
+
+    english_news:close()
+end
 
 local function show_news_formspec(name)
     local player_info = minetest.get_player_information(name)
@@ -44,6 +72,7 @@ local function show_news_formspec(name)
 
     news_formspec = news_formspec .. md2f.md2f(0.2, 0.2, 24.8, 13.4, news_markdown, "server_news", colors)
 
+    -- Gotta log 'em all!
     minetest.log("action", "Showing news to " .. name .. " in language " .. language_code)
     minetest.show_formspec(name, "server_news", news_formspec)
     
@@ -57,6 +86,8 @@ local function show_news_formspec(name)
             else
                 storage:set_int(prefix .. name, 0)
             end
+
+            minetest.log("action", "Toggled newsOnJoinExceptions_" .. name .. " to " .. tostring(storage:get_int(prefix .. name)))
         end
     end)
 end
@@ -64,9 +95,12 @@ end
 minetest.register_on_joinplayer(function(player)
     local name = player:get_player_name()
     
+    -- Only show news to players who want to see it
     if (storage:get_int(prefix .. name) == 0) then
         show_news_formspec(name)
     end
+
+    check_for_updates(name)
 end)
 
 minetest.register_chatcommand("news", {
@@ -82,9 +116,13 @@ minetest.register_chatcommand("toggle_news", {
         if (current_state == 0) then
             storage:set_int(prefix .. name, 1)
             minetest.chat_send_player(name, "You will no longer see automatic news")
+
+            minetest.log("action", name .. " disabled automatic news")
         else
             storage:set_int(prefix .. name, 0)
             minetest.chat_send_player(name, "You will now see automatic news")
+
+            minetest.log("action", name .. " enabled automatic news")
         end
     end
 })
