@@ -1,4 +1,4 @@
-# Server News
+# Markdown Server News
 
 Once a player logs in to the server, they will be shown a dialog with server news. Depending on their language settings, different dialogues will be shown. This mod comes with sample news dialogues for English, Spanish, French and Italian.
 
