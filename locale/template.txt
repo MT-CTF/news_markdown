@@ -1,0 +1,2 @@
+# textdomain: news_markdown
+Toggle English Translation=
