@@ -1,5 +1,7 @@
 local S = minetest.get_translator("news_markdown")
 
+news_markdown = {}
+
 local colors = {
 	background_color = "#FFF0",
 	font_color = "#FFF",
@@ -24,6 +26,31 @@ local colors = {
 local news_files = {}
 local current_hash
 local loaded_files = false
+
+local tabs = {}
+local tab_id = {}
+---@param name string Name of the tab
+---@param func function params: name, lang_code_forced
+---@param func function params: player, formname, fields
+function news_markdown.register_tab(name, func, fieldfunc)
+	table.insert(tabs, {
+		name = name,
+		func = func,
+		fieldfunc = fieldfunc,
+	})
+
+	tab_id[name] = #tabs
+end
+
+local function get_tab_names()
+	local out = ""
+
+	for _, data in pairs(tabs) do
+		out = out .. data.name .. ","
+	end
+
+	return out:sub(1, -2)
+end
 
 -- Check the player's last seen news hash against the current hash, if they are different then notify of updates
 local function check_hash(player)
@@ -88,7 +115,47 @@ local function update_news_files(name)
 	end)
 end
 
-local function show_news_formspec(name, lang_code_forced)
+local tabposition = {}
+-- name, cmdparams?
+function news_markdown.show_news_formspec(name, ...)
+	if not minetest.get_player_by_name(name) then
+		return false, "You need to be ingame to run this command"
+	end
+
+	local news_formspec = "formspec_version[5]" ..
+		"size[25,15]" ..
+		"noprepend[]" ..
+		"bgcolor[" .. colors.background_color .. "]" ..
+		"tabheader[0,0;tabs;"..get_tab_names()..";"..(tabposition[name] or 1)..";false;true]" ..
+		"button_exit[11,14;3,0.9;exit;OK]"
+
+	local out = tabs[tabposition[name] or 1].func(name, ...)
+
+	if out then
+		news_formspec = news_formspec .. out
+	else
+		return
+	end
+
+	-- Gotta log 'em all!
+	minetest.log("action", "Showing news from tab "..(tabposition[name] or 1).." to " .. name)
+	minetest.show_formspec(name, "news_markdown:server_news", news_formspec)
+end
+
+minetest.register_on_player_receive_fields(function(player, formname, fields, ...)
+	if formname ~= "news_markdown:server_news" then return end
+
+	local name = player:get_player_name()
+
+	if fields.tabs then
+		tabposition[name] = tonumber(fields.tabs)
+		news_markdown.show_news_formspec(name)
+	end
+
+	return tabs[tabposition[player:get_player_name()] or 1].fieldfunc(player, formname, fields, ...)
+end)
+
+news_markdown.register_tab("News", function(name, lang_code_forced)
 	local language_code = minetest.get_player_information(name).lang_code
 
 	if language_code == "" then
@@ -99,23 +166,11 @@ local function show_news_formspec(name, lang_code_forced)
 		language_code = lang_code_forced
 	end
 
-	local news_formspec = "formspec_version[5]" ..
-		"size[25,15]" ..
-		"noprepend[]" ..
-		"bgcolor[" .. colors.background_color .. "]" ..
-		"button_exit[11,14;3,0.9;exit;OK]" ..
-		(language_code == "en" and
-			"button[0.1,14;5,0.9;switch_back;" or
-			"button[0.1,14;5,0.9;switch_en;"
-		) ..
-		S("Toggle English Translation") .."]"
-
-
 	local news = news_files["news_" .. language_code .. ".md"]
 
 	if not news then
 		if language_code ~= "en" then
-			show_news_formspec(name, "en")
+			news_markdown.show_news_formspec(name, "en")
 			return
 		end
 
@@ -124,23 +179,27 @@ local function show_news_formspec(name, lang_code_forced)
 
 	minetest.get_player_by_name(name):get_meta():set_string("news_markdown:last_seen_hash", current_hash)
 
-	news_formspec = news_formspec .. md2f.md2f(0.2, 0.2, 24.8, 13.4, news, "hypertext", colors)
+	--[[
+		(language_code == "en" and
+			"button[0.1,14;5,0.9;switch_back;" or
+			"button[0.1,14;5,0.9;switch_en;"
+		) ..
+		S("Toggle English Translation") .."]" ..
+	--]]
+	return md2f.md2f(0.2, 0.2, 24.8, 13.4, news, "hypertext", colors)
+end,
 
-	-- Gotta log 'em all!
-	minetest.log("action", "Showing news to " .. name .. " in language " .. language_code)
-	minetest.show_formspec(name, "news_markdown:server_news", news_formspec)
-end
-
-minetest.register_on_player_receive_fields(function(player, formname, fields)
-	if formname ~= "news_markdown:server_news" then return end
-
+-- on_player_receive_fields
+function(player, formname, fields)
 	local name = player:get_player_name()
 
 	if fields.switch_en then
-		show_news_formspec(name, "en")
+		news_markdown.show_news_formspec(name, "en")
 	elseif fields.switch_back then
-		show_news_formspec(name)
+		news_markdown.show_news_formspec(name)
 	end
+
+	return true
 end)
 
 minetest.register_on_joinplayer(function(player)
@@ -149,7 +208,7 @@ end)
 
 minetest.register_chatcommand("news", {
 	description = "Shows the server news",
-	func = show_news_formspec
+	func = news_markdown.show_news_formspec
 })
 
 minetest.register_chatcommand("update_news", {
