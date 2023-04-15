@@ -10,6 +10,7 @@ If there are news updates (`news_markdown` will check the English news each time
 
 
 ## Custom CTF Changes
+* Added an api for adding extra tabs to the news form
 * Fixed crashes when news files aren't found
 * Moved news files to <worldir>/news/ to keep things clean
 * Removed the formspec showing on login to prevent collision with CTF formspecs
