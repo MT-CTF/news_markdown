@@ -1,4 +1,4 @@
-local S = minetest.get_translator("news_markdown")
+local hud = mhud.init()
 
 news_markdown = {}
 
@@ -67,10 +67,30 @@ local function check_hash(player)
 	if current_hash ~= meta:get_string("news_markdown:last_seen_hash") then
 		minetest.chat_send_player(player:get_player_name(), minetest.colorize("green", "There are news updates, type /news to see them"))
 
-		hud_events.new(player, {
+		hud:add(player, "text", {
+			hud_elem_type = "text",
+			position = {x = 1, y = 1},
+			offset = {x = -24, y = -22},
+			alignment = {x = "left", y = "up"},
 			text = "There are news updates, type /news to see them",
-			color = "success",
+			color = 0x00FF00,
+			z_index = 100
 		})
+		hud:add(player, "bg", {
+			hud_elem_type = "image",
+			position = {x = 1, y = 1},
+			alignment = {x = "left", y = "up"},
+			texture = "news_markdown_gui_formbg.png",
+			image_scale = 0.8,
+			z_index = 99
+		})
+
+		local pname = player:get_player_name()
+		minetest.after(60, function()
+			if hud:exists(pname, "text") then
+				hud:clear(pname)
+			end
+		end)
 	end
 end
 
@@ -120,6 +140,10 @@ local tabposition = {}
 function news_markdown.show_news_formspec(name, ...)
 	if not minetest.get_player_by_name(name) then
 		return false, "You need to be ingame to run this command"
+	end
+
+	if hud:exists(name, "text") then
+		hud:clear(name)
 	end
 
 	local news_formspec = "formspec_version[5]" ..
