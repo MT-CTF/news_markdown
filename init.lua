@@ -67,30 +67,32 @@ local function check_hash(player)
 	if current_hash ~= meta:get_string("news_markdown:last_seen_hash") then
 		minetest.chat_send_player(player:get_player_name(), minetest.colorize("green", "There are news updates, type /news to see them"))
 
-		hud:add(player, "text", {
-			hud_elem_type = "text",
-			position = {x = 1, y = 1},
-			offset = {x = -24, y = -22},
-			alignment = {x = "left", y = "up"},
-			text = "There are news updates, type /news to see them",
-			color = 0x00FF00,
-			z_index = 100
-		})
-		hud:add(player, "bg", {
-			hud_elem_type = "image",
-			position = {x = 1, y = 1},
-			alignment = {x = "left", y = "up"},
-			texture = "news_markdown_gui_formbg.png",
-			image_scale = 0.8,
-			z_index = 99
-		})
+		if not hud:exists("text") and not hud:exists("bg") then
+			hud:add(player, "text", {
+				hud_elem_type = "text",
+				position = {x = 1, y = 1},
+				offset = {x = -24, y = -22},
+				alignment = {x = "left", y = "up"},
+				text = "There are news updates, type /news to see them",
+				color = 0x00FF00,
+				z_index = 100
+			})
+			hud:add(player, "bg", {
+				hud_elem_type = "image",
+				position = {x = 1, y = 1},
+				alignment = {x = "left", y = "up"},
+				texture = "news_markdown_gui_formbg.png",
+				image_scale = 0.8,
+				z_index = 99
+			})
 
-		local pname = player:get_player_name()
-		minetest.after(60, function()
-			if hud:exists(pname, "text") then
-				hud:clear(pname)
-			end
-		end)
+			local pname = player:get_player_name()
+			minetest.after(60, function()
+				if hud:exists(pname, "text") then
+					hud:clear(pname)
+				end
+			end)
+		end
 	end
 end
 
