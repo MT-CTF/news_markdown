@@ -67,7 +67,7 @@ local function check_hash(player)
 	if current_hash ~= meta:get_string("news_markdown:last_seen_hash") then
 		minetest.chat_send_player(player:get_player_name(), minetest.colorize("green", "There are news updates, type /news to see them"))
 
-		if not hud:exists("text") and not hud:exists("bg") then
+		if not hud:exists(player, "text") and not hud:exists(player, "bg") then
 			hud:add(player, "text", {
 				hud_elem_type = "text",
 				position = {x = 1, y = 1},
