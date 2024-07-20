@@ -23,7 +23,7 @@ local colors = {
 	block_quote_color = "#FFA",
 }
 
-local news_files = {}
+local news_formspecs = {}
 local current_hash
 local loaded_files = false
 
@@ -57,7 +57,7 @@ local function check_hash(player)
 	if not loaded_files then
 		minetest.after(1, check_hash, player)
 		return
-	elseif not news_files["news_en.md"] then
+	elseif not news_formspecs["news_en.md"] then
 		minetest.log("warning", "[news_markdown] News is either set up incorrectly, or isn't set up at all")
 		return
 	end
@@ -120,10 +120,13 @@ local function update_news_files(name)
 
 		return news_files_update
 	end, function(news_files_update)
-		news_files = news_files_update
+		news_formspecs = {}
+		for file, md in pairs(news_files_update) do
+			news_formspecs[file] = md2f.md2f(0.2, 0.2, 24.8, 13.4, md, "hypertext", colors)
+		end
 
-		if news_files["news_en.md"] then
-			current_hash = minetest.sha1(news_files["news_en.md"])
+		if news_files_update["news_en.md"] then
+			current_hash = minetest.sha1(news_files_update["news_en.md"])
 			loaded_files = true
 		end
 
@@ -192,7 +195,7 @@ news_markdown.register_tab("News", function(name, lang_code_forced)
 		language_code = lang_code_forced
 	end
 
-	local news = news_files["news_" .. language_code .. ".md"]
+	local news = news_formspecs["news_" .. language_code .. ".md"]
 
 	if not news then
 		if language_code ~= "en" then
@@ -212,7 +215,7 @@ news_markdown.register_tab("News", function(name, lang_code_forced)
 		) ..
 		S("Toggle English Translation") .."]" ..
 	--]]
-	return md2f.md2f(0.2, 0.2, 24.8, 13.4, news, "hypertext", colors)
+	return news
 end,
 
 -- on_player_receive_fields
